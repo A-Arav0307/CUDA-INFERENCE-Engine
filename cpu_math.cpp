@@ -117,5 +117,37 @@ std::vector<double> softmax(const std::vector<double>& v){
 
 
 int main() {
+    // sum_vector
+    assert(std::fabs(sum_vector({1.0, 2.0, 3.0}) - 6.0) < 1e-9);
+    assert(std::fabs(sum_vector({}) - 0.0) < 1e-9);
+    assert(std::fabs(sum_vector({-1.0, 1.0}) - 0.0) < 1e-9);
+    assert(std::fabs(sum_vector({0.5, 0.25, 0.125}) - 0.875) < 1e-9);
+
+    // dot_product
+    assert(std::fabs(dot_product({1, 2, 3}, {4, 5, 6}) - 32.0) < 1e-9);
+    assert(std::fabs(dot_product({}, {}) - 0.0) < 1e-9);
+    assert(std::fabs(dot_product({1.5, -2.0}, {2.0, 0.5}) - 2.0) < 1e-9);
+
+    // vector_add
+    {
+        std::vector<double> c = vector_add({1, 2, 3}, {10, 20, 30});
+        assert(c.size() == 3);
+        assert(std::fabs(c[0] - 11.0) < 1e-9);
+        assert(std::fabs(c[1] - 22.0) < 1e-9);
+        assert(std::fabs(c[2] - 33.0) < 1e-9);
+    }
+    {
+        std::vector<double> c = vector_add({}, {});
+        assert(c.empty());
+    }
+
+    // argmax
+    assert(argmax({0.1, 0.9, 0.0}) == 1);
+    assert(argmax({3, 3, 3}) == 0);
+    assert(argmax({-5, -1, -10}) == 1);
+    assert(argmax({7}) == 0);
+    assert(argmax({-1, -2, -3, -0.5}) == 3);
+
+    std::cout << "All tests passed!" << std::endl;
     return 0;
 }
