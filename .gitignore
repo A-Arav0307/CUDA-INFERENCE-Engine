@@ -1,0 +1,28 @@
+# Build artifacts
+a.out
+*.o
+*.obj
+build/
+
+# Compiled phase binaries
+learning/phase0
+learning/phase1
+learning/phase2
+learning/phase3
+learning/phase4
+learning/phase5
+learning/phase6
+learning/phase7
+
+# Personal learning scaffolding — not part of the project
+learning/phase*.cpp
+learning/phase*.md
+learning/*_lessons.md
+
+# Local workspace
+.claude/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
