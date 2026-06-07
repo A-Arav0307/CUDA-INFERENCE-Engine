@@ -53,6 +53,33 @@ int argmax(const std::vector<double>& v) {
 }
 
 
+std::vector<double> matvec(const std::vector<double>& M, size_t rows, size_t cols, const std::vector<double>& v){
+    assert(M.size() == rows * cols and v.size() == cols);
+    std::vector<double> multiplied_matrix(rows, 0.0);
+    for (size_t i = 0; i < rows; ++i){
+        for (size_t j = 0; j < cols; ++j){
+            multiplied_matrix[i] += M[i*cols + j] * v[j];
+        }
+    }
+    return multiplied_matrix;
+}
+
+std::vector<double> matmul(const std::vector<double>& A, size_t A_rows, size_t A_cols, const std::vector<double>& B, size_t B_rows, size_t B_cols){
+    assert(A_cols == B_rows);
+    std::vector<double> multiplied_matrix(A_rows*B_cols, 0.0);
+    for (size_t i = 0; i < B_cols; ++i){
+        for (size_t j = 0; j < A_rows; ++j){
+            for (size_t k = 0; k < A_cols; ++k){
+                multiplied_matrix[i * B_cols + j] += A[i * A_cols + k] * B[k * B_cols + j];
+            }
+
+        }
+    }
+
+    return multiplied_matrix;
+}
+
+
 int main() {
     return 0;
 }
