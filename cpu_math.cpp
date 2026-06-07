@@ -2,6 +2,7 @@
 #include <vector>
 #include <cassert>
 #include <cmath>
+#include <algorithm>
 
 
 double sum_vector(const std::vector<double>& v) {
@@ -77,6 +78,41 @@ std::vector<double> matmul(const std::vector<double>& A, size_t A_rows, size_t A
     }
 
     return multiplied_matrix;
+}
+
+std::vector<double> relu(const std::vector<double>& v){
+    int size = v.size();
+    std::vector<double> new_list(size, 0.0);
+
+    for (size_t i = 0; i < v.size(); ++i){
+        new_list[i] = std::max(v[i], 0.0);
+    }
+    return new_list;
+}
+
+//returns the vector v with all values adding up to 1
+std::vector<double> softmax(const std::vector<double>& v){
+    if (v.empty()){
+        std::vector<double>empty = {};
+        return empty;
+    }
+
+    std::vector<double> final_list(v.size(), 0.0);
+    double max = v[0];
+    for (double val : v){
+        max = std::max(max, val);
+    }
+    double sum = 0;
+    for (size_t i = 0; i < v.size(); ++i){
+        final_list[i] = std::exp(v[i] - max);
+        sum += std::exp(v[i] - max);
+    }
+
+    for (size_t i = 0; i < final_list.size(); ++i){
+        final_list[i] = final_list[i] / sum;
+    }
+
+    return final_list;
 }
 
 
