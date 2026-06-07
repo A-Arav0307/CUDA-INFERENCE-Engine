@@ -216,6 +216,75 @@ int main() {
     }
     std::cout << "matmul passed!" << std::endl;
 
+    // ===== relu =====
+    {
+        auto r = relu({-1, 0, 1, -2.5, 3});
+        assert(r.size() == 5);
+        assert(std::fabs(r[0] - 0.0) < 1e-9);
+        assert(std::fabs(r[1] - 0.0) < 1e-9);
+        assert(std::fabs(r[2] - 1.0) < 1e-9);
+        assert(std::fabs(r[3] - 0.0) < 1e-9);
+        assert(std::fabs(r[4] - 3.0) < 1e-9);
+    }
+    {
+        auto r = relu({});
+        assert(r.empty());
+    }
+    {
+        auto r = relu({-1, -2, -3});
+        assert(r.size() == 3);
+        assert(std::fabs(r[0] - 0.0) < 1e-9);
+        assert(std::fabs(r[1] - 0.0) < 1e-9);
+        assert(std::fabs(r[2] - 0.0) < 1e-9);
+    }
+    {
+        auto r = relu({1, 2, 3});
+        assert(std::fabs(r[0] - 1.0) < 1e-9);
+        assert(std::fabs(r[1] - 2.0) < 1e-9);
+        assert(std::fabs(r[2] - 3.0) < 1e-9);
+    }
+    std::cout << "relu passed!" << std::endl;
+
+    // ===== softmax =====
+    {
+        // uniform input → uniform output
+        auto r = softmax({0, 0, 0});
+        assert(r.size() == 3);
+        assert(std::fabs(r[0] - 1.0/3.0) < 1e-9);
+        assert(std::fabs(r[1] - 1.0/3.0) < 1e-9);
+        assert(std::fabs(r[2] - 1.0/3.0) < 1e-9);
+        double s = 0; for (double x : r) s += x;
+        assert(std::fabs(s - 1.0) < 1e-9);
+    }
+    {
+        //checking if overflow occurs.
+        auto r = softmax({1000, 1000, 1000});
+        assert(r.size() == 3);
+        assert(std::fabs(r[0] - 1.0/3.0) < 1e-9);
+        assert(std::fabs(r[1] - 1.0/3.0) < 1e-9);
+        assert(std::fabs(r[2] - 1.0/3.0) < 1e-9);
+    }
+    {
+        auto r = softmax({1, 2, 3});
+        assert(r.size() == 3);
+        assert(std::fabs(r[0] - 0.09003057) < 1e-6);
+        assert(std::fabs(r[1] - 0.24472847) < 1e-6);
+        assert(std::fabs(r[2] - 0.66524096) < 1e-6);
+        double s = 0; for (double x : r) s += x;
+        assert(std::fabs(s - 1.0) < 1e-9);
+    }
+    {
+        // single element softmax → [1.0]
+        auto r = softmax({7});
+        assert(r.size() == 1);
+        assert(std::fabs(r[0] - 1.0) < 1e-9);
+    }
+    {
+        auto r = softmax({});
+        assert(r.empty());
+    }
+    std::cout << "softmax passed!" << std::endl;
+
     std::cout << "All tests passed!" << std::endl;
     return 0;
 }
