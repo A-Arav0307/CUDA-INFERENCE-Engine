@@ -148,6 +148,74 @@ int main() {
     assert(argmax({7}) == 0);
     assert(argmax({-1, -2, -3, -0.5}) == 3);
 
+    // ===== matvec =====
+    {
+        std::vector<double> M = {1, 2, 3, 4, 5, 6};  // 2×3
+        auto r = matvec(M, 2, 3, {1, 1, 1});
+        assert(r.size() == 2);
+        assert(std::fabs(r[0] -  6.0) < 1e-9);
+        assert(std::fabs(r[1] - 15.0) < 1e-9);
+    }
+    {
+        std::vector<double> M = {1, 2, 3, 4, 5, 6};
+        auto r = matvec(M, 2, 3, {1, 0, 0});
+        assert(std::fabs(r[0] - 1.0) < 1e-9);
+        assert(std::fabs(r[1] - 4.0) < 1e-9);
+    }
+    {
+        std::vector<double> M = {1, 2, 3, 4, 5, 6};
+        auto r = matvec(M, 2, 3, {0, 0, 1});
+        assert(std::fabs(r[0] - 3.0) < 1e-9);
+        assert(std::fabs(r[1] - 6.0) < 1e-9);
+    }
+    {
+        std::vector<double> M = {1, 2, 3, 4, 5, 6};
+        auto r = matvec(M, 2, 3, {1, 2, 3});
+        assert(std::fabs(r[0] - 14.0) < 1e-9);
+        assert(std::fabs(r[1] - 32.0) < 1e-9);
+    }
+    {
+        // 2×2 identity matrix
+        std::vector<double> I = {1, 0, 0, 1};
+        auto r = matvec(I, 2, 2, {5, 7});
+        assert(std::fabs(r[0] - 5.0) < 1e-9);
+        assert(std::fabs(r[1] - 7.0) < 1e-9);
+    }
+    std::cout << "matvec passed!" << std::endl;
+
+    // ===== matmul =====
+    {
+        // 2×3 times 3×2  →  2×2
+        std::vector<double> A = {1, 2, 3, 4, 5, 6};
+        std::vector<double> B = {1, 2, 3, 4, 5, 6};
+        auto r = matmul(A, 2, 3, B, 3, 2);
+        assert(r.size() == 4);
+        assert(std::fabs(r[0] - 22.0) < 1e-9);
+        assert(std::fabs(r[1] - 28.0) < 1e-9);
+        assert(std::fabs(r[2] - 49.0) < 1e-9);
+        assert(std::fabs(r[3] - 64.0) < 1e-9);
+    }
+    {
+        // identity * B = B
+        std::vector<double> I = {1, 0, 0, 1};
+        std::vector<double> B = {1, 2, 3, 4};
+        auto r = matmul(I, 2, 2, B, 2, 2);
+        assert(r.size() == 4);
+        assert(std::fabs(r[0] - 1.0) < 1e-9);
+        assert(std::fabs(r[1] - 2.0) < 1e-9);
+        assert(std::fabs(r[2] - 3.0) < 1e-9);
+        assert(std::fabs(r[3] - 4.0) < 1e-9);
+    }
+    {
+        // 1×1 times 1×1
+        std::vector<double> A = {2};
+        std::vector<double> B = {3};
+        auto r = matmul(A, 1, 1, B, 1, 1);
+        assert(r.size() == 1);
+        assert(std::fabs(r[0] - 6.0) < 1e-9);
+    }
+    std::cout << "matmul passed!" << std::endl;
+
     std::cout << "All tests passed!" << std::endl;
     return 0;
 }
