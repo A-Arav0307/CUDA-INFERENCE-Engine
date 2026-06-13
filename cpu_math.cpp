@@ -319,6 +319,59 @@ int main() {
     }
     std::cout << "softmax passed!" << std::endl;
 
+    // ===== predict =====
+    {
+        std::vector<double> input = {1, 2, 3};
+        std::vector<double> W1 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        std::vector<double> b1 = {0, 0, 0, 0};
+        std::vector<double> W2 = {0, 0, 0, 0, 0, 0, 0, 0};
+        std::vector<double> b2 = {0, 0};
+        assert(predict(input, W1, 4, 3, b1, W2, 2, b2) == 0);
+    }
+    {
+        std::vector<double> input = {1, 2, 3};
+        std::vector<double> W1 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        std::vector<double> b1 = {0, 0, 0, 0};
+        std::vector<double> W2 = {0, 0, 0, 0, 0, 0, 0, 0};
+        std::vector<double> b2 = {0.1, 0.9};
+        assert(predict(input, W1, 4, 3, b1, W2, 2, b2) == 1);
+    }
+    {
+        std::vector<double> input = {1, 2, 3};
+        std::vector<double> W1 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        std::vector<double> b1 = {0, 0, 0, 0};
+        std::vector<double> W2 = {0, 0, 0, 0, 0, 0, 0, 0};
+        std::vector<double> b2 = {2.0, -1.0};
+        assert(predict(input, W1, 4, 3, b1, W2, 2, b2) == 0);
+    }
+    {
+        std::vector<double> input = {1, 1};
+        std::vector<double> W1 = {1, 0, 0, 1};
+        std::vector<double> b1 = {0, 0};
+        std::vector<double> W2 = {1, 0, 1, 1};
+        std::vector<double> b2 = {0, 0};
+        assert(predict(input, W1, 2, 2, b1, W2, 2, b2) == 1);
+    }
+    {
+        // relu clips the negative hidden unit
+        std::vector<double> input = {1};
+        std::vector<double> W1 = {1, -1};
+        std::vector<double> b1 = {0, 0};
+        std::vector<double> W2 = {1, 2, 0, 0};
+        std::vector<double> b2 = {0, 0};
+        assert(predict(input, W1, 2, 1, b1, W2, 2, b2) == 0);
+    }
+    {
+        // b1 shifts the pre-activations
+        std::vector<double> input = {0};
+        std::vector<double> W1 = {5, 5};
+        std::vector<double> b1 = {1, -5};
+        std::vector<double> W2 = {0, 1, 1, 0};
+        std::vector<double> b2 = {0, 0};
+        assert(predict(input, W1, 2, 1, b1, W2, 2, b2) == 1);
+    }
+    std::cout << "predict passed!" << std::endl;
+
     std::cout << "All tests passed!" << std::endl;
     return 0;
 }
