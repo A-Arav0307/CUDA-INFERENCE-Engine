@@ -4,10 +4,10 @@ a small c++/cuda inference engine i'm building from scratch to learn how ml infe
 
 ## status
 
-cpu math primitives are done. everything else is in progress.
+cpu math and a 2-layer mlp forward pass are working on hardcoded weights. next step is splitting into headers with a cmake build.
 
 - [x] cpu math: sum_vector, dot_product, vector_add, argmax, matvec, matmul, relu, softmax
-- [ ] 2-layer mlp forward pass on hardcoded weights
+- [x] 2-layer mlp forward pass on hardcoded weights
 - [ ] split into headers + cmake build
 - [ ] pytorch training + weight export, c++ load, verify predictions match
 - [ ] cuda kernels for vectoradd, relu, matmul
@@ -28,6 +28,7 @@ matvec passed!
 matmul passed!
 relu passed!
 softmax passed!
+predict passed!
 All tests passed!
 ```
 
