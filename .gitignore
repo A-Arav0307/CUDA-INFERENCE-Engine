@@ -26,3 +26,6 @@ learning/*_lessons.md
 .DS_Store
 .vscode/
 .idea/
+
+#Cmake Builds
+build/
