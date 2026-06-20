@@ -2,7 +2,7 @@
 #include <vector> 
 
 double sum_vector(const std::vector<double>& v);
-double dot_product(const std::vector<double>& v); 
+double dot_product(const std::vector<double>& a, const std::vector<double>& b); 
 std::vector<double> vector_add(const std::vector<double>& a, const std::vector<double>& b); 
 int argmax(const std::vector<double>& v);
 std::vector<double> matvec(const std::vector<double>& M, size_t rows, size_t cols, const std::vector<double>& v); 
