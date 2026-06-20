@@ -4,11 +4,11 @@ a small c++/cuda inference engine i'm building from scratch to learn how ml infe
 
 ## status
 
-cpu math and a 2-layer mlp forward pass are working on hardcoded weights. next step is splitting into headers with a cmake build.
+cpu math and a 2-layer mlp forward pass are working. project is now split into a proper multi-file layout with separate headers, source, tests, and a cmake build. next step is loading real weights exported from pytorch.
 
 - [x] cpu math: sum_vector, dot_product, vector_add, argmax, matvec, matmul, relu, softmax
 - [x] 2-layer mlp forward pass on hardcoded weights
-- [ ] split into headers + cmake build
+- [x] split into headers + cmake build (`include/`, `src/`, `tests/`, CMakeLists.txt)
 - [ ] pytorch training + weight export, c++ load, verify predictions match
 - [ ] cuda kernels for vectoradd, relu, matmul
 - [ ] tiled matmul w/ shared memory, batched inference
@@ -17,8 +17,9 @@ cpu math and a 2-layer mlp forward pass are working on hardcoded weights. next s
 ## build & run
 
 ```
-g++ -std=c++17 -Wall -Wextra -O2 cpu_math.cpp -o cpu_math
-./cpu_math
+cmake -S . -B build
+cmake --build build
+./build/final_test
 ```
 
 if everything works:
