@@ -4,6 +4,8 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision.transforms import v2
 import torch.optim.lr_scheduler as lr_scheduler
+import numpy as np
+import os
 
 
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
@@ -79,10 +81,36 @@ def test(dataloader, model, loss_fn):
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     
-epochs = 10
+
+     
+#Accuracy test which ~ 97.7% on avg
+
+epochs = 5
 for t in range(epochs):
     print(f"Epoch {t+1}\n-------------------------------")
     train(train_dataloader, model, loss_fn, optimizer)
     test(test_dataloader, model, loss_fn)
     
 print("Done!")
+
+#saving weights to weights directory under scripts
+weights_dict = model.state_dict()
+#keys(['linear_relu_stack.0.weight', 'linear_relu_stack.0.bias', 'linear_relu_stack.2.weight', 'linear_relu_stack.2.bias'])
+key_mapping = {
+    'linear_relu_stack.0.weight': 'W1',
+    'linear_relu_stack.0.bias':   'b1',
+    'linear_relu_stack.2.weight': 'W2',
+    'linear_relu_stack.2.bias':   'b2'
+}
+
+weights_dir = os.path.join("scripts", "weights") 
+os.makedirs(weights_dir, exist_ok=True)
+save_path = os.path.join(weights_dir, "model_weights.pth")
+torch.save(model.state_dict(), save_path) 
+
+for original_key, new_name in key_mapping.items():
+    if original_key in weights_dict:
+        numpy_array = weights_dict[original_key].detach().cpu().numpy()
+        binary_path = os.path.join(weights_dir, f"{new_name}.bin")
+        numpy_array.tofile(binary_path)
+        print(f"Saved {original_key} -> {binary_path} (Shape: {numpy_array.shape})")
