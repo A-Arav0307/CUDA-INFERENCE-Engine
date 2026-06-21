@@ -21,6 +21,7 @@ learning/*_lessons.md
 
 # Python virtual environment
 scripts/venv/
+data/MNIST/raw
 
 # Local workspace
 .claude/
