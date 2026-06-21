@@ -62,10 +62,6 @@ def train(dataloader, model, loss_fn, optimizer):
         optimizer.zero_grad()
 
 
-        if batch % 100 == 0:
-            loss, current = loss.item(), (batch + 1) * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-            
 def test(dataloader, model, loss_fn):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
@@ -79,18 +75,14 @@ def test(dataloader, model, loss_fn):
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-    
-
-     
-#Accuracy test which ~ 97.7% on avg
+    return correct
 
 epochs = 5
 for t in range(epochs):
-    print(f"Epoch {t+1}\n-------------------------------")
     train(train_dataloader, model, loss_fn, optimizer)
-    test(test_dataloader, model, loss_fn)
-    
+
+accuracy = test(test_dataloader, model, loss_fn)
+print(f"Final accuracy: {(100*accuracy):>0.1f}%")
 print("Done!")
 
 #saving weights to weights directory under scripts
@@ -114,3 +106,26 @@ for original_key, new_name in key_mapping.items():
         binary_path = os.path.join(weights_dir, f"{new_name}.bin")
         numpy_array.tofile(binary_path)
         print(f"Saved {original_key} -> {binary_path} (Shape: {numpy_array.shape})")
+
+        
+#export test sampples to cpu_math.cpp 
+
+
+sample_loader = DataLoader(test_data, batch_size=100, shuffle=False)
+test_images, test_labels = next(iter(sample_loader)) 
+
+images_flattened = test_images.view(100, 784).numpy().astype(np.float32)
+label_flattened = test_labels.numpy().astype(np.int64)
+model.eval()
+with torch.no_grad():
+    logits = model(test_images.to(device))
+    preds_npy = logits.argmax(dim=1).cpu().numpy().astype(np.int64)
+
+output_path = os.path.join(weights_dir, "test_images.bin")
+label_path = os.path.join(weights_dir, "test_labels.bin")
+preds_path = os.path.join(weights_dir, "test_preds_pytorch.bin")
+
+images_flattened.tofile(output_path)
+label_flattened.tofile(label_path)
+preds_npy.tofile(preds_path) 
+
