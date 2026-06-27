@@ -1,12 +1,8 @@
-//#include "loader.h"
+#include "loader.h"
 #include <iostream>
 #include <vector> 
 #include <fstream>
 #include <stdexcept> 
-
-int main() {
-    //std::count << load_weights()
-}
 
 std::vector<double> load_weights(const std::string& path, size_t n) {
     std::ifstream file(path, std::ios::binary);

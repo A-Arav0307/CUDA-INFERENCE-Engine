@@ -1,5 +1,6 @@
 #include "cpu_math.h"
 #include "mlp.h"
+#include "loader.h"
 #include <iostream> 
 #include <cassert> 
 #include <cmath>
@@ -224,7 +225,16 @@ int main() {
         std::vector<double> W2 = {0, 1, 1, 0};
         std::vector<double> b2 = {0, 0};
         assert(predict(input, W1, 2, 1, b1, W2, 2, b2) == 1);
+
+        
     }
+
+    {
+        //test for cpp loader
+        
+    }
+
+
     std::cout << "predict passed!" << std::endl;
 
     std::cout << "All tests passed!" << std::endl;
