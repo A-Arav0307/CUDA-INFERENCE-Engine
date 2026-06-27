@@ -229,10 +229,7 @@ int main() {
         
     }
 
-    {
-        //test for cpp loader
-        
-    }
+
 
 
     std::cout << "predict passed!" << std::endl;
