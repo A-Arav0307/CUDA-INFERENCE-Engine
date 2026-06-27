@@ -16,7 +16,6 @@ learning/phase7
 
 # Personal learning scaffolding — not part of the project
 learning/phase*.cpp
-learning/phase*.md
 learning/*_lessons.md
 
 # Python virtual environment
