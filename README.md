@@ -4,13 +4,15 @@ a small c++/cuda inference engine i'm building from scratch to learn how ml infe
 
 ## status
 
-cpu math and a 2-layer mlp forward pass are working. project is now split into a proper multi-file layout with separate headers, source, tests, and a cmake build. next step is loading real weights exported from pytorch.
+cpu inference pipeline is complete. trained an mlp on mnist in pytorch, exported weights as raw float32 binaries, built a c++ loader, and ran inference on 100 test images — 99/100 correct, 100/100 matching pytorch's predictions. next step is porting the inference pipeline to cuda.
 
 - [x] cpu math: sum_vector, dot_product, vector_add, argmax, matvec, matmul, relu, softmax
 - [x] 2-layer mlp forward pass on hardcoded weights
 - [x] split into headers + cmake build (`include/`, `src/`, `tests/`, CMakeLists.txt)
-- [ ] pytorch training + weight export, c++ load, verify predictions match
-- [ ] cuda kernels for vectoradd, relu, matmul
+- [x] pytorch training + weight export (`scripts/train.py`, `scripts/export_weights.py`)
+- [x] c++ weight loader reading raw float32 binaries (`src/loader.cpp`)
+- [x] full c++ inference on 100 mnist test images — 99/100 correct, 100/100 match pytorch
+- [ ] cuda kernels for matvec, relu, bias add
 - [ ] tiled matmul w/ shared memory, batched inference
 - [ ] benchmarks vs pytorch, cpu, naive cuda, optimized cuda
 
@@ -31,6 +33,19 @@ relu passed!
 softmax passed!
 predict passed!
 All tests passed!
+```
+
+to run the full inference test (requires exported weights in `scripts/weights/`):
+
+```
+./build/inference_test
+```
+
+output:
+
+```
+99/100 correct
+100/100 match PyTorch predictions
 ```
 
 ## notes
