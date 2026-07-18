@@ -4,19 +4,8 @@ a.out
 *.obj
 build/
 
-# Compiled phase binaries
-learning/phase0
-learning/phase1
-learning/phase2
-learning/phase3
-learning/phase4
-learning/phase5
-learning/phase6
-learning/phase7
-
 # Personal learning scaffolding — not part of the project
-learning/phase*.cpp
-learning/*_lessons.md
+learning/
 
 # Python virtual environment
 scripts/venv/

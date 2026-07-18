@@ -4,7 +4,7 @@ a small c++/cuda inference engine i'm building from scratch to learn how ml infe
 
 ## status
 
-cpu inference pipeline is complete. trained an mlp on mnist in pytorch, exported weights as raw float32 binaries, built a c++ loader, and ran inference on 100 test images — 99/100 correct, 100/100 matching pytorch's predictions. next step is porting the inference pipeline to cuda.
+cpu and gpu inference pipelines are both complete and matching. trained an mlp on mnist in pytorch, exported weights as raw float32 binaries, built a c++ loader, ran inference on 100 test images on the cpu, then reimplemented the same forward pass as cuda kernels and confirmed identical predictions on the gpu. next step is optimizing and benchmarking the cuda implementation.
 
 - [x] cpu math: sum_vector, dot_product, vector_add, argmax, matvec, matmul, relu, softmax
 - [x] 2-layer mlp forward pass on hardcoded weights
@@ -12,7 +12,8 @@ cpu inference pipeline is complete. trained an mlp on mnist in pytorch, exported
 - [x] pytorch training + weight export (`scripts/train.py`, `scripts/export_weights.py`)
 - [x] c++ weight loader reading raw float32 binaries (`src/loader.cpp`)
 - [x] full c++ inference on 100 mnist test images — 99/100 correct, 100/100 match pytorch
-- [ ] cuda kernels for matvec, relu, bias add
+- [x] cuda kernels for matvec, relu, bias add, wired into a full `predict_cuda` pipeline
+- [x] gpu inference on 100 mnist test images, matching cpu predictions
 - [ ] tiled matmul w/ shared memory, batched inference
 - [ ] benchmarks vs pytorch, cpu, naive cuda, optimized cuda
 
@@ -46,6 +47,19 @@ output:
 ```
 99/100 correct
 100/100 match PyTorch predictions
+```
+
+to run the gpu inference test (requires a cuda-capable gpu):
+
+```
+./build/test_inference_cuda
+```
+
+output:
+
+```
+99/100 correct (CUDA)
+99/100 match CPU predictions
 ```
 
 ## notes
