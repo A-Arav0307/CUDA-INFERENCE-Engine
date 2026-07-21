@@ -34,6 +34,27 @@ __global__ void bias_add_kernel(float* v, const float* bias, int n) {
     if (index >= n) return;
     v[index] += bias[index];
 }
+
+__global__ void batched_matmul_kernel(
+    const float* inputs, const float* W, float* outputs,
+    int batch_size, int rows, int cols
+) {
+
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int batch_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    float sum = 0.0f;
+
+    if (row >= rows) return;
+    if (batch_idx >= batch_size) return;
+
+    for (int j = 0; j < cols; ++j) {
+        sum += W[row * cols + j] * inputs[batch_idx * cols + j];
+
+    }
+    outputs[batch_idx * rows + row] = sum;
+
+
+}
 // created because image dimensions are constant, so no need to reallocate and Memcpy memory from host to device and vice versa each time,
 //results in 100x speedup
 
@@ -106,47 +127,31 @@ int predict_cuda(
 
 }
 
-// int main() {
-//     // MATVEC KERNEL /////////////////
-//     float h_M[] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f};
-//     float h_v[] = {1.0f, 1.0f, 1.0f};
-//     float h_out[] = {0.0f, 0.0f};
+int main() {
+    float h_W[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    float h_inputs[] = {1, 0, 1, 0, 0, 1, 0, 1};
+    float h_outputs[6];
 
-//     float* d_M = nullptr;
-//     float* d_v = nullptr;
-//     float* d_out = nullptr;
+    float* d_W = nullptr;
+    float* d_inputs = nullptr;
+    float* d_outputs = nullptr;
 
-//     cudaMalloc(&d_M, 2 * 3 * sizeof(float));
-//     cudaMalloc(&d_v, 3 * sizeof(float));
-//     cudaMalloc(&d_out, 2 * sizeof(float));
+    cudaMalloc(&d_W, 12 * sizeof(float));
+    cudaMalloc(&d_inputs, 8 * sizeof(float));
+    cudaMalloc(&d_outputs, 6 * sizeof(float));
 
-//     cudaMemcpy(d_M, h_M, 2 * 3 * sizeof(float), cudaMemcpyHostToDevice);
-//     cudaMemcpy(d_v, h_v, 3 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_W, h_W, 12 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_inputs, h_inputs, 8 * sizeof(float), cudaMemcpyHostToDevice);
 
-//     matvec_kernel<<<1, 256>>>(d_M, d_v, d_out, 2, 3);
-//     cudaDeviceSynchronize();
+    dim3 blockDim(2, 3);
+    dim3 gridDim(1, 1);
 
-//     cudaMemcpy(h_out, d_out, 2 * sizeof(float), cudaMemcpyDeviceToHost);
-//     printf("--- GPU Results ---\n");
-//     for (int i = 0; i < 2; ++i) {
-//         printf("h_out[%d] = %f\n", i, h_out[i]);
-//     }
-//     ///////////////////////////////
-
-//     //CUDA RELU AND BIAS ADD KERNELS////////////
-//     float h_relu[] = {1.2f, -3.4f, 2.0f, -0.1f, 5.1f};
-//     float* d_relu = nullptr;
-//     cudaMalloc(&d_relu, 5 * sizeof(float));
-//     cudaMemcpy(d_relu, h_relu, 5 * sizeof(float), cudaMemcpyHostToDevice);
-//     relu_kernel<<<1, 256>>>(d_relu, 5);
-//     cudaDeviceSynchronize();
-//     //brings computed answer on gpu back to the cpu
-//     cudaMemcpy(h_relu, d_relu, 5 * sizeof(float), cudaMemcpyDeviceToHost);
+    batched_matmul_kernel<<<gridDim, blockDim>>>(d_inputs, d_W, d_outputs, 2, 3, 4);
+    cudaMemcpy(h_outputs, d_outputs, 6 * sizeof(float), cudaMemcpyDeviceToHost);
 
 
-//     //PREDICT CUDA FN/////
-//         //now need to load 100 image dataset and feed into cuda fn//
+for (int i = 0; i < 6; ++i) {
+    printf("h_outputs[%d] = %f\n", i, h_outputs[i]);
 
-
-
-// }
+}
+}
