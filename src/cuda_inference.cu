@@ -34,43 +34,51 @@ __global__ void bias_add_kernel(float* v, const float* bias, int n) {
     if (index >= n) return;
     v[index] += bias[index];
 }
+// created because image dimensions are constant, so no need to reallocate and Memcpy memory from host to device and vice versa each time,
+//results in 100x speedup
+
+//w1 is the weight matrix that connects input layer to hidden layer and maps 784 inputs to 128 hidden neurons (128 x 784) matrix
+
+struct DeviceWeights {
+    float* d_W1; float* d_b1;
+    float* d_W2; float* d_b2;
+    int n_in, n_hidden, n_out;
+};
+
+DeviceWeights upload_weights(const float* h_W1, const float* h_b1,
+    int n_hidden, int n_in, const float* h_W2, const float* h_b2, int n_out) {
+        DeviceWeights w;
+        w.n_in = n_in; w.n_hidden = n_hidden; w.n_out = n_out;
+        cudaMalloc(&w.d_W1, n_hidden * n_in * sizeof(float));
+        cudaMalloc(&w.d_b1, n_hidden * sizeof(float));
+        cudaMalloc(&w.d_W2, n_out * n_hidden * sizeof(float));
+        cudaMalloc(&w.d_b2, n_out * sizeof(float));
+        cudaMemcpy(w.d_W1, h_W1, n_hidden * n_in * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(w.d_b1, h_b1, n_hidden * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(w.d_W2, h_W2, n_out * n_hidden * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(w.d_b2, h_b2, n_out * sizeof(float), cudaMemcpyHostToDevice);
+        return w;
+    }
+
 
 int predict_cuda(
-    const float* h_input, int n_in,
-    const float* h_W1, const float* h_b1, int n_hidden,
-    const float* h_W2, const float* h_b2, int n_out
+    const float* d_input, int n_in,
+    const float* d_W1, const float* d_b1, int n_hidden,
+    const float* d_W2, const float* d_b2, int n_out
 ) {
     // int index = threadIdx.x + blockDim.x * blockIdx.x;
-
-    float* d_in = nullptr;
-    float* d_W1 = nullptr;
-    float* d_W2 = nullptr;
-    float* d_b1 = nullptr;
-    float* d_b2 = nullptr;
     float* d_hidden = nullptr;
     float* d_out = nullptr;
 
-    cudaMalloc(&d_in, n_in * sizeof(float));
-    cudaMalloc(&d_W1, n_hidden * n_in * sizeof(float));
-    cudaMalloc(&d_b1, n_hidden * sizeof(float));
     cudaMalloc(&d_hidden, n_hidden * sizeof(float));
-    cudaMalloc(&d_W2, n_out * n_hidden * sizeof(float));
-    cudaMalloc(&d_b2, n_out * sizeof(float));
     cudaMalloc(&d_out, n_out * sizeof(float));
-
-    //writing data from cpu to gpu
-    cudaMemcpy(d_in, h_input, n_in * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_W1, h_W1, n_hidden * n_in * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b1, h_b1, n_hidden * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_W2, h_W2, n_out * n_hidden * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b2, h_b2, n_out * sizeof(float), cudaMemcpyHostToDevice);
 
     //matvec layer 1
         //calculate threads and blocks
     int threadsPerBlock = 256;
-    int blocks_hidden = (128 + threadsPerBlock - 1); //ceiling division formula for blocks
+    int blocks_hidden = (128 + threadsPerBlock - 1) / threadsPerBlock; //ceiling division formula for blocks
 
-    matvec_kernel<<<blocks_hidden, threadsPerBlock>>>(d_W1, d_in, d_hidden, 128, 784);
+    matvec_kernel<<<blocks_hidden, threadsPerBlock>>>(d_W1, d_input, d_hidden, 128, 784);
     bias_add_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden, d_b1, n_hidden);
     relu_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden, n_hidden);
     int blocks_out = (n_out + threadsPerBlock - 1) / threadsPerBlock;
@@ -81,14 +89,10 @@ int predict_cuda(
     float h_out[10];
     //free memory
     cudaMemcpy(h_out, d_out, n_out * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaFree(d_in);
-    cudaFree(d_W1);
-    cudaFree(d_b1);
     cudaFree(d_hidden);
-    cudaFree(d_W2);
-    cudaFree(d_b2);
     cudaFree(d_out);
 
+    //h_out is length 10, representing numbers 0 - 9
     int max_idx = 0;
     float max_val = h_out[0];
     for (int j = 1; j < n_out; ++j) {
