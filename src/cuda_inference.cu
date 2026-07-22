@@ -127,31 +127,31 @@ int predict_cuda(
 
 }
 
-int main() {
-    float h_W[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-    float h_inputs[] = {1, 0, 1, 0, 0, 1, 0, 1};
-    float h_outputs[6];
+// int main() {
+//     float h_W[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+//     float h_inputs[] = {1, 0, 1, 0, 0, 1, 0, 1};
+//     float h_outputs[6];
 
-    float* d_W = nullptr;
-    float* d_inputs = nullptr;
-    float* d_outputs = nullptr;
+//     float* d_W = nullptr;
+//     float* d_inputs = nullptr;
+//     float* d_outputs = nullptr;
 
-    cudaMalloc(&d_W, 12 * sizeof(float));
-    cudaMalloc(&d_inputs, 8 * sizeof(float));
-    cudaMalloc(&d_outputs, 6 * sizeof(float));
+//     cudaMalloc(&d_W, 12 * sizeof(float));
+//     cudaMalloc(&d_inputs, 8 * sizeof(float));
+//     cudaMalloc(&d_outputs, 6 * sizeof(float));
 
-    cudaMemcpy(d_W, h_W, 12 * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_inputs, h_inputs, 8 * sizeof(float), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_W, h_W, 12 * sizeof(float), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_inputs, h_inputs, 8 * sizeof(float), cudaMemcpyHostToDevice);
 
-    dim3 blockDim(2, 3);
-    dim3 gridDim(1, 1);
+//     dim3 blockDim(2, 3);
+//     dim3 gridDim(1, 1);
 
-    batched_matmul_kernel<<<gridDim, blockDim>>>(d_inputs, d_W, d_outputs, 2, 3, 4);
-    cudaMemcpy(h_outputs, d_outputs, 6 * sizeof(float), cudaMemcpyDeviceToHost);
+//     batched_matmul_kernel<<<gridDim, blockDim>>>(d_inputs, d_W, d_outputs, 2, 3, 4);
+//     cudaMemcpy(h_outputs, d_outputs, 6 * sizeof(float), cudaMemcpyDeviceToHost);
 
 
-for (int i = 0; i < 6; ++i) {
-    printf("h_outputs[%d] = %f\n", i, h_outputs[i]);
+// for (int i = 0; i < 6; ++i) {
+//     printf("h_outputs[%d] = %f\n", i, h_outputs[i]);
 
-}
-}
+// }
+// }
