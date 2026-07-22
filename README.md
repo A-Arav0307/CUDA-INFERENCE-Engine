@@ -4,7 +4,7 @@ a small c++/cuda inference engine i'm building from scratch to learn how ml infe
 
 ## status
 
-cpu and gpu inference pipelines are both complete and matching. trained an mlp on mnist in pytorch, exported weights as raw float32 binaries, built a c++ loader, ran inference on 100 test images on the cpu, then reimplemented the same forward pass as cuda kernels and confirmed identical predictions on the gpu. next step is optimizing and benchmarking the cuda implementation.
+cpu and gpu inference pipelines are both complete and matching. trained an mlp on mnist in pytorch, exported weights as raw float32 binaries, built a c++ loader, ran inference on 100 test images on the cpu, then reimplemented the same forward pass as cuda kernels and confirmed identical predictions on the gpu. gpu path is now optimized: persistent device weights (no re-uploading per call), a tiled shared-memory matmul kernel, and a fully batched pipeline processing all 100 images in one launch instead of looping. next step is benchmarking cpu vs naive cuda vs optimized cuda.
 
 - [x] cpu math: sum_vector, dot_product, vector_add, argmax, matvec, matmul, relu, softmax
 - [x] 2-layer mlp forward pass on hardcoded weights
@@ -14,7 +14,7 @@ cpu and gpu inference pipelines are both complete and matching. trained an mlp o
 - [x] full c++ inference on 100 mnist test images — 99/100 correct, 100/100 match pytorch
 - [x] cuda kernels for matvec, relu, bias add, wired into a full `predict_cuda` pipeline
 - [x] gpu inference on 100 mnist test images, matching cpu predictions
-- [ ] tiled matmul w/ shared memory, batched inference
+- [x] tiled matmul w/ shared memory, batched inference (all 100 images in a single pipeline launch)
 - [ ] benchmarks vs pytorch, cpu, naive cuda, optimized cuda
 
 ## build & run
@@ -59,7 +59,7 @@ output:
 
 ```
 99/100 correct (CUDA)
-99/100 match CPU predictions
+100/100 match CPU predictions
 ```
 
 ## notes
