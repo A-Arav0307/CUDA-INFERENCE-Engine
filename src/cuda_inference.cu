@@ -127,31 +127,63 @@ int predict_cuda(
 
 }
 
-// int main() {
-//     float h_W[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-//     float h_inputs[] = {1, 0, 1, 0, 0, 1, 0, 1};
-//     float h_outputs[6];
+#define TILE_SIZE 16
+__global__ void tiled_matmul_kernel(
+    const float* inputs, const float* W, float* outputs,
+    int batch_size, int rows, int cols
+) {
+    //declaring 16x16 grids for shared memory
+    __shared__ float shared_inputs[TILE_SIZE][TILE_SIZE];
+    __shared__ float shared_W[TILE_SIZE][TILE_SIZE];
 
-//     float* d_W = nullptr;
-//     float* d_inputs = nullptr;
-//     float* d_outputs = nullptr;
+    //shared memory initialization
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
 
-//     cudaMalloc(&d_W, 12 * sizeof(float));
-//     cudaMalloc(&d_inputs, 8 * sizeof(float));
-//     cudaMalloc(&d_outputs, 6 * sizeof(float));
+    int row = threadIdx.y + blockDim.y * blockIdx.y;
+    int batch_idx = threadIdx.x + blockDim.x * blockIdx.x;
+    float accumulate_value = 0.0f;
 
-//     cudaMemcpy(d_W, h_W, 12 * sizeof(float), cudaMemcpyHostToDevice);
-//     cudaMemcpy(d_inputs, h_inputs, 8 * sizeof(float), cudaMemcpyHostToDevice);
+    //blocks of 16 required, using integer rounding up trick
+    int num_tiles = (cols + TILE_SIZE - 1) / TILE_SIZE;
+    for (int t = 0; t < num_tiles; ++t) {
+        int current_k = t * TILE_SIZE + ty;
+        if (batch_idx < batch_size && current_k < cols) {
+            //row major layout to transform 3d grid into 1d line of computer memory;
+            int input_idx = batch_idx * cols + current_k;
+            shared_inputs[ty][tx] = inputs[input_idx];
+        }
+        else {
+            shared_inputs[ty][tx] = 0.0f;
+        }
 
-//     dim3 blockDim(2, 3);
-//     dim3 gridDim(1, 1);
+        int current_W_row = t * TILE_SIZE + tx;
+        if (current_W_row < cols && row < rows) {
+            int W_index = row * cols + current_W_row;
+            shared_W[ty][tx] = W[W_index];
+        } else {
+            shared_W[ty][tx] = 0.0f;
+        }
 
-//     batched_matmul_kernel<<<gridDim, blockDim>>>(d_inputs, d_W, d_outputs, 2, 3, 4);
-//     cudaMemcpy(h_outputs, d_outputs, 6 * sizeof(float), cudaMemcpyDeviceToHost);
+        __syncthreads();
+
+        for (int k = 0; k < TILE_SIZE; ++k) {
+            accumulate_value +=  shared_inputs[k][tx] * shared_W[ty][k];
+        }
+
+        __syncthreads();
+    }
+
+    if (batch_idx < batch_size && row < rows) {
+        int output_index = batch_idx * rows + row;
+        outputs[output_index] = accumulate_value;
+    }
 
 
-// for (int i = 0; i < 6; ++i) {
-//     printf("h_outputs[%d] = %f\n", i, h_outputs[i]);
+}
 
-// }
-// }
+__global__ void batched_bias_add_kernel(float* v, const float* bias, int total_n, int rows) {
+    int index = threadIdx.x + blockDim.x * blockIdx.x;
+    if (index >= total_n) return;
+    v[index] += bias[index % rows];
+}

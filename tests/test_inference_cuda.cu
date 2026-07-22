@@ -13,6 +13,10 @@
         } \
     } while (0)
 
+__global__ void tiled_matmul_kernel(const float* inputs, const float* W, float* outputs, int batch_size, int rows, int cols);
+__global__ void batched_bias_add_kernel(float* v, const float* bias, int total_n, int rows);
+__global__ void relu_kernel(float* v, int n);
+
 int predict_cuda(
     const float* h_input, int n_in,
     const float* h_W1, const float* h_b1, int n_hidden,
@@ -65,19 +69,51 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     int cuda_correct = 0;
     int cpu_match = 0;
     DeviceWeights weights = upload_weights(W1.data(), b1.data(), 128, 784, W2.data(), b2.data(), 10);
-    for (int i = 0; i < 100; ++i) {
-        const float* current_img = &images[i * 784]; //finds where image starts because matrix is 1-dimensional
-        int target_label = labels[i];
-        int expected_cpu_pred = cpu_preds[i];
-        float* d_input = nullptr;
-        cudaMalloc(&d_input, 784 * sizeof(float));
-        cudaMemcpy(d_input, current_img, 784 * sizeof(float), cudaMemcpyHostToDevice);
-        int cuda_pred = predict_cuda(d_input, 784, weights.d_W1, weights.d_b1, 128, weights.d_W2, weights.d_b2, 10);
-        cudaFree(d_input);
 
-        if (cuda_pred == target_label) cuda_correct++;
-        if (cuda_pred == expected_cpu_pred) cpu_match++;
-    }
+    //bias_add_kernel tests
+    float* d_all_inputs = nullptr;
+    float* d_hidden_batched = nullptr;
+    float* d_out_batched = nullptr;
+
+    cudaMalloc(&d_all_inputs, 100 * 784 * sizeof(float));
+    cudaMalloc(&d_hidden_batched, 100 * 128 * sizeof(float));
+    cudaMalloc(&d_out_batched, 100 * 10 * sizeof(float));
+
+    cudaMemcpy(d_all_inputs, images.data(), 100 * 784 * sizeof(float), cudaMemcpyHostToDevice);
+
+
+    dim3 blockDim(16, 16);
+    dim3 gridDim_layer1((100 + 15) / 16, (128 + 15) / 16);
+    dim3 gridDim_layer2((100 + 15) / 16, (10 + 15) / 16);
+
+    int threadsPerBlock = 256;
+    int blocks_hidden = (100 * 128 + threadsPerBlock - 1) / threadsPerBlock;  // for hidden-layer-sized calls
+    int blocks_out = (100 * 10 + threadsPerBlock - 1) / threadsPerBlock;
+
+    //building 2 layer mlp from cuda kernels
+    tiled_matmul_kernel<<<gridDim_layer1, blockDim>>>(d_all_inputs, weights.d_W1, d_hidden_batched, 100, 128, 784);
+    batched_bias_add_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, weights.d_b1, 100*128, 128);
+    relu_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, 100*128);
+    tiled_matmul_kernel<<<gridDim_layer2, blockDim>>>(d_hidden_batched, weights.d_W2, d_out_batched, 100, 10, 128);
+    batched_bias_add_kernel<<<blocks_out, threadsPerBlock>>>(d_out_batched, weights.d_b2, 100*10, 10);
+
+    std::vector<float> h_out_batched(100*10, 0.0f);
+    cudaMemcpy(h_out_batched.data(), d_out_batched, 100*10*sizeof(float), cudaMemcpyDeviceToHost);
+    int max_idx = 0;
+    float max_val = h_out_batched[0];
+
+    for (int i = 0; i < 100; ++i) {
+    int max_idx = 0;
+    float max_val = h_out_batched[i * 10];
+        for (int j = 1; j < 10; ++j) {
+            if (h_out_batched[i * 10 + j] > max_val) {
+                max_val = h_out_batched[i * 10 + j];
+                max_idx = j;
+            }
+        }
+    if (max_idx == labels[i]) cuda_correct++;
+    if (max_idx == cpu_preds[i]) cpu_match++;
+}
 
     std::cout << cuda_correct << "/100 correct (CUDA)" << std::endl;
     std::cout << cpu_match << "/100 match CPU predictions" << std::endl;
