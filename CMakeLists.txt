@@ -22,3 +22,7 @@ set_target_properties(test_inference_cuda PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 
+add_executable(benchmark_cuda tests/benchmark_cuda.cu src/cuda_inference.cu)
+target_link_libraries(benchmark_cuda PRIVATE inference_core)
+set_target_properties(benchmark_cuda PROPERTIES CUDA_STANDARD 17)
+
