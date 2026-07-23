@@ -30,18 +30,23 @@ std::vector<float> to_float(const std::vector<double>& vec) {
 }
 
 int main() {
+
+    //change how many images at a time should be used
+    int N = 100;
+
+
     auto W1_double = load_weights("scripts/weights/W1.bin", 128 * 784);
     auto b1_double = load_weights("scripts/weights/b1.bin", 128);
     auto W2_double = load_weights("scripts/weights/W2.bin", 10 * 128);
     auto b2_double = load_weights("scripts/weights/b2.bin", 10);
     auto images_double = load_weights("scripts/weights/test_images.bin", 100 * 784);
-    std::vector<float> h_out_batched(100 * 10, 0.0f);
+    std::vector<float> h_out_batched(N * 10, 0.0f);
 
     std::ifstream labels_file("scripts/weights/test_labels.bin", std::ios::binary);
-if (!labels_file.is_open()) {
-    std::cerr << "Error: Could not open labels file!" << std::endl;
-    return 1;
-}
+    if (!labels_file.is_open()) {
+        std::cerr << "Error: Could not open labels file!" << std::endl;
+        return 1;
+    }
 std::vector<int64_t> labels(100);
 labels_file.read(reinterpret_cast<char*>(labels.data()), 100 * sizeof(int64_t));
 
@@ -60,6 +65,13 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     auto b2 = to_float(b2_double);
     auto images = to_float(images_double);
 
+    std::vector<float> images_N(N * 784);
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < 784; ++j) {
+            images_N[i * 784 + j] = images[(i % 100) * 784 + j];
+        }
+    }
+
     int cuda_correct = 0;
     int cpu_match = 0;
     DeviceWeights weights = upload_weights(W1.data(), b1.data(), 128, 784, W2.data(), b2.data(), 10);
@@ -69,28 +81,18 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     float* d_hidden_batched = nullptr;
     float* d_out_batched = nullptr;
 
-    cudaMalloc(&d_all_inputs, 100 * 784 * sizeof(float));
-    cudaMalloc(&d_hidden_batched, 100 * 128 * sizeof(float));
-    cudaMalloc(&d_out_batched, 100 * 10 * sizeof(float));
-
-    cudaMemcpy(d_all_inputs, images.data(), 100 * 784 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMalloc(&d_all_inputs, N * 784 * sizeof(float));
+    cudaMalloc(&d_hidden_batched, N * 128 * sizeof(float));
+    cudaMalloc(&d_out_batched, N * 10 * sizeof(float));
 
 
     dim3 blockDim(16, 16);
-    dim3 gridDim_layer1((100 + 15) / 16, (128 + 15) / 16);
-    dim3 gridDim_layer2((100 + 15) / 16, (10 + 15) / 16);
+    dim3 gridDim_layer1((N + 15) / 16, (128 + 15) / 16);
+    dim3 gridDim_layer2((N + 15) / 16, (10 + 15) / 16);
 
     int threadsPerBlock = 256;
-    int blocks_hidden = (100 * 128 + threadsPerBlock - 1) / threadsPerBlock;  // for hidden-layer-sized calls
-    int blocks_out = (100 * 10 + threadsPerBlock - 1) / threadsPerBlock;
-
-    //building 2 layer mlp from cuda kernels
-    tiled_matmul_kernel<<<gridDim_layer1, blockDim>>>(d_all_inputs, weights.d_W1, d_hidden_batched, 100, 128, 784);
-    batched_bias_add_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, weights.d_b1, 100*128, 128);
-    relu_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, 100*128);
-    tiled_matmul_kernel<<<gridDim_layer2, blockDim>>>(d_hidden_batched, weights.d_W2, d_out_batched, 100, 10, 128);
-    batched_bias_add_kernel<<<blocks_out, threadsPerBlock>>>(d_out_batched, weights.d_b2, 100*10, 10);
-
+    int blocks_hidden = (N * 128 + threadsPerBlock - 1) / threadsPerBlock;  // for hidden-layer-sized calls
+    int blocks_out = (N * 10 + threadsPerBlock - 1) / threadsPerBlock;
 
 
     //timing tests for cpu:
@@ -99,14 +101,14 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     int correct = 0;
     int pytorch_matches = 0;
 
-   for (size_t i = 0; i < 100; ++i) {
-        size_t start_idx = i * 784;
-        size_t end_idx = (i + 1) * 784;
+   for (size_t i = 0; i < N; ++i) {
+        size_t start_idx = (i % 100) * 784;
+        size_t end_idx = start_idx + 784;
         std::vector<double> chunk(images_double.begin() + start_idx, images_double.begin() + end_idx);
 
         size_t predicted_value = predict(chunk, W1_double, 128, 784, b1_double, W2_double, 10, b2_double);
-        if (predicted_value == (size_t)labels[i]) correct += 1;
-        if (predicted_value == (size_t)cpu_preds[i]) pytorch_matches += 1;
+        if (predicted_value == (size_t) labels[i % 100]) correct += 1;
+        if (predicted_value == (size_t) cpu_preds[i % 100]) pytorch_matches += 1;
     }
 
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -114,7 +116,7 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
 
     std::cout << "Time for CPU run: " << cpu_ms << "ms\n" << std::endl;
 
-    //timing tests for native CUDA:
+    //timing tests for naive CUDA:
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
@@ -126,8 +128,8 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     cudaFree(d_input);
     cudaEventRecord(start);
 
-    for (int i = 0; i < 100; ++i) {
-       const float* current_img = &images[i * 784];
+    for (int i = 0; i < N; ++i) {
+       const float* current_img = &images_N[i * 784];
        float* d_input = nullptr;
        cudaMalloc(&d_input, 784 * sizeof(float));
        cudaMemcpy(d_input, current_img, 784 * sizeof(float), cudaMemcpyHostToDevice);
@@ -152,7 +154,7 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     cudaEventCreate(&stop_h2d);
 
     cudaEventRecord(start_h2d);
-    cudaMemcpy(d_all_inputs, images.data(), 100 * 784 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_all_inputs, images_N.data(), N * 784 * sizeof(float), cudaMemcpyHostToDevice);
     cudaEventRecord(stop_h2d);
     cudaEventSynchronize(stop_h2d);
 
@@ -166,11 +168,11 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     cudaEventCreate(&stop_compute);
     cudaEventRecord(start_compute);
        //2-layer mlp from test_inference_cuda.cu
-    tiled_matmul_kernel<<<gridDim_layer1, blockDim>>>(d_all_inputs, weights.d_W1, d_hidden_batched, 100, 128, 784);
-    batched_bias_add_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, weights.d_b1, 100*128, 128);
-    relu_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, 100*128);
-    tiled_matmul_kernel<<<gridDim_layer2, blockDim>>>(d_hidden_batched, weights.d_W2, d_out_batched, 100, 10, 128);
-    batched_bias_add_kernel<<<blocks_out, threadsPerBlock>>>(d_out_batched, weights.d_b2, 100*10, 10);
+    tiled_matmul_kernel<<<gridDim_layer1, blockDim>>>(d_all_inputs, weights.d_W1, d_hidden_batched, N, 128, 784);
+    batched_bias_add_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, weights.d_b1, N*128, 128);
+    relu_kernel<<<blocks_hidden, threadsPerBlock>>>(d_hidden_batched, N*128);
+    tiled_matmul_kernel<<<gridDim_layer2, blockDim>>>(d_hidden_batched, weights.d_W2, d_out_batched, N, 10, 128);
+    batched_bias_add_kernel<<<blocks_out, threadsPerBlock>>>(d_out_batched, weights.d_b2, N*10, 10);
 
     cudaEventRecord(stop_compute);
     cudaEventSynchronize(stop_compute);
@@ -186,7 +188,7 @@ pytorch_file.read(reinterpret_cast<char*>(cpu_preds.data()), 100 * sizeof(int64_
     cudaEventCreate(&end_outputs);
 
     cudaEventRecord(start_outputs);
-    cudaMemcpy(h_out_batched.data(), d_out_batched, 10 * 100 * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_out_batched.data(), d_out_batched, 10 * N * sizeof(float), cudaMemcpyDeviceToHost);
     cudaEventRecord(end_outputs);
     cudaEventSynchronize(end_outputs);
 
