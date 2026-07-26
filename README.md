@@ -2,6 +2,29 @@
 
 a small c++/cuda inference engine i'm building from scratch to learn how ml inference actually works under the hood instead of treating `model(x)` as a black box. plan is to train an mlp on mnist in pytorch, export the weights, then run inference in c++ first and then in cuda.
 
+## pipeline
+
+```
+                 PyTorch (train.py)
+                         │
+                         ▼
+              scripts/weights/*.bin
+                         │
+                         ▼
+              loader.cpp (load_weights)
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+        CPU inference          CUDA kernels
+       (mlp.cpp,              (cuda_inference.cu,
+        predict())          batched + tiled pipeline)
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                   predictions
+            (cpu vs cuda vs pytorch)
+```
+
 ## status
 
 cpu and gpu inference pipelines are both complete and matching. trained an mlp on mnist in pytorch, exported weights as raw float32 binaries, built a c++ loader, ran inference on 100 test images on the cpu, then reimplemented the same forward pass as cuda kernels and confirmed identical predictions on the gpu. gpu path is optimized: persistent device weights (no re-uploading per call), a tiled shared-memory matmul kernel, and a fully batched pipeline processing all images in one launch instead of looping. benchmarked cpu vs naive per-image cuda vs the optimized batched/tiled pipeline across batch sizes from 100 to 100,000 images — see below.
