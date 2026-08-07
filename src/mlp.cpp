@@ -3,6 +3,8 @@
 #include <iostream> 
 #include <cassert> 
 
+//showing how github works
+
 std::vector<double> linear_layer(
     const std::vector<double>& input,
     const std::vector<double>& W, size_t n_out, size_t n_in,

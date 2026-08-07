@@ -14,4 +14,5 @@ size_t predict(
     const std::vector<double>& b1,
     const std::vector<double>& W2, size_t n_out,
     const std::vector<double>& b2
+    
 ); 
